@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>THE COZY CATALYST</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>
+body { font-family: 'Nunito', sans-serif; }
+.card { transition: 0.25s; cursor:pointer; }
+.card:hover { transform: scale(1.05); }
+.panel { display:none; }
+.backBtn { position:absolute; top:15px; left:15px; background:white; padding:6px 10px; border-radius:12px; }
+.flower { width:220px; height:220px; background: radial-gradient(circle,#fbcfe8,#f9a8d4); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:42px; margin:auto; }
+.breathe { width:140px; height:140px; background:#93c5fd; border-radius:50%; margin:auto; animation: breathe 4s infinite; }
+@keyframes breathe {0%{transform:scale(1);}50%{transform:scale(1.5);}100%{transform:scale(1);}}
+.dayCell { min-height:70px; }
+</style>
+</head>
+<body class="bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 min-h-screen">
+
+<div id="loginPage" class="fixed inset-0 flex items-center justify-center">
+  <div class="bg-white p-6 rounded-3xl text-center w-80">
+    <h2 class="text-xl font-bold">🌸 THE COZY CATALYST</h2>
+    <input id="username" placeholder="Username" class="border p-2 w-full mt-2">
+    <input id="password" type="password" placeholder="Password" class="border p-2 w-full mt-2">
+    <div class="mt-2">
+      <input type="checkbox" id="rememberMe"> Remember me
+    </div>
+    <button id="loginBtn" type="button" class="bg-pink-300 w-full py-2 mt-3">Enter</button>
+    <p id="error" class="text-red-400 hidden">Enter details</p>
+  </div>
+</div>
+
+<div id="app" style="display:none;">
+<h1 class="text-center text-2xl font-bold mt-4">🌸 THE COZY CATALYST</h1>
+
+<div class="max-w-4xl mx-auto bg-white p-4 mt-4 rounded">
+  <h2 class="text-center font-bold mb-2" id="monthLabel"></h2>
+  <div class="grid grid-cols-7 text-center font-semibold mb-2">
+    <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+  </div>
+  <div id="calendarGrid" class="grid grid-cols-7 gap-2"></div>
+</div>
+
+<div class="grid grid-cols-3 gap-6 max-w-4xl mx-auto mt-6">
+<div class="card bg-white rounded-2xl flex items-center justify-center aspect-square" onclick="openPanel('pomodoro')">⏳ Pomodoro</div>
+<div class="card bg-white rounded-2xl flex items-center justify-center aspect-square" onclick="openPanel('music')">🎵 Music</div>
+<div class="card bg-white rounded-2xl flex items-center justify-center aspect-square" onclick="openPanel('meditate')">🧘 Meditation</div>
+<div class="card bg-white rounded-2xl flex items-center justify-center aspect-square" onclick="openPanel('notes')">📝 Notes</div>
+<div class="card bg-white rounded-2xl flex items-center justify-center aspect-square" onclick="openPanel('todo')">✅ To-Do</div>
+<div class="card bg-white rounded-2xl flex items-center justify-center aspect-square" onclick="openPanel('voice')">🎤 Voice</div>
+</div>
+</div>
+
+<div id="eventModal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center">
+  <div class="bg-white p-4 rounded w-80">
+    <h3 class="font-bold mb-2" id="selectedDate"></h3>
+    <input id="eventTitle" placeholder="Event" class="border p-2 w-full mb-2">
+    <input id="eventTime" type="time" class="border p-2 w-full mb-2">
+    <input id="mediaInput" type="file" accept="image/*,video/*" class="mb-2">
+    <button onclick="saveEvent()" class="bg-pink-300 w-full py-2">Save</button>
+    <button onclick="closeModal()" class="mt-2 w-full">Cancel</button>
+  </div>
+</div>
+
+<div id="pomodoro" class="panel fixed inset-0 bg-pink-100 text-center"><button class="backBtn" onclick="closePanels()">⬅</button><div id="timer" class="flower mt-20">25:00</div><button onclick="startPomodoro()">Start</button></div>
+<div id="music" class="panel fixed inset-0 bg-purple-100 p-5"><button class="backBtn" onclick="closePanels()">⬅</button><input id="songInput" class="w-full p-2 mt-4"><button onclick="addSong()">Add</button><ul id="playlist"></ul></div>
+<div id="meditate" class="panel fixed inset-0 bg-blue-100 text-center"><button class="backBtn" onclick="closePanels()">⬅</button><div class="breathe mt-20"></div><div id="medTimer">05:00</div><button onclick="startMeditation()">Start</button></div>
+<div id="notes" class="panel fixed inset-0 bg-yellow-100 p-5"><button class="backBtn" onclick="closePanels()">⬅</button><textarea id="noteInput" class="w-full"></textarea><button onclick="saveNote()">Save</button><div id="notesList"></div></div>
+<div id="todo" class="panel fixed inset-0 bg-green-100 p-5"><button class="backBtn" onclick="closePanels()">⬅</button><input id="todoInput"><button onclick="addTodo()">Add</button><ul id="todoList"></ul></div>
+<div id="voice" class="panel fixed inset-0 bg-orange-100 text-center"><button class="backBtn" onclick="closePanels()">⬅</button><p>Voice coming soon</p></div>
+
+<script>
+var currentDate = new Date();
+var selectedDay = null;
+
+window.addEventListener('DOMContentLoaded', function(){
+  document.getElementById('loginBtn').onclick = login;
+
+  document.getElementById('password').addEventListener('keydown', function(e){
+    if(e.key === 'Enter') login();
+  });
+
+  document.getElementById('noteInput').addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      saveNote();
+    }
+  });
+
+  document.getElementById('todoInput').addEventListener('keydown', function(e){
+    if(e.key === 'Enter') addTodo();
+  });
+
+  document.getElementById('songInput').addEventListener('keydown', function(e){
+    if(e.key === 'Enter') addSong();
+  });
+});
+
+function login(){
+  var u = document.getElementById('username').value.trim();
+  var p = document.getElementById('password').value.trim();
+
+  if(!u || !p){
+    document.getElementById('error').classList.remove('hidden');
+    return;
+  }
+
+  if(document.getElementById('rememberMe').checked){
+    localStorage.setItem('user', u);
+  }
+
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+
+  loadCalendar();
+}
+
+function loadCalendar(){
+  var grid=document.getElementById('calendarGrid');
+  var monthLabel=document.getElementById('monthLabel');
+
+  grid.innerHTML='';
+  var year=currentDate.getFullYear();
+  var month=currentDate.getMonth();
+  monthLabel.textContent = currentDate.toLocaleString('default',{month:'long'}) + ' ' + year;
+
+  var firstDay=new Date(year,month,1).getDay();
+  var days=new Date(year,month+1,0).getDate();
+
+  for(var i=0;i<firstDay;i++){
+    var empty=document.createElement('div');
+    grid.appendChild(empty);
+  }
+
+  for(var d=1;d<=days;d++){
+    var cell=document.createElement('div');
+    cell.className='dayCell bg-pink-50 p-1 rounded';
+    cell.innerHTML='<div>'+d+'</div>';
+
+    var key = year+'-'+month+'-'+d;
+    var data = JSON.parse(localStorage.getItem(key) || '[]');
+
+    data.forEach(function(e){
+      var ev=document.createElement('div');
+      ev.className='text-xs';
+      ev.textContent = e.time + ' ' + e.title;
+      cell.appendChild(ev);
+    });
+
+    cell.onclick=(function(day){return function(){openModal(day);};})(d);
+    grid.appendChild(cell);
+  }
+}
+
+function openModal(day){
+  selectedDay = day;
+  var y = currentDate.getFullYear();
+  var m = currentDate.getMonth();
+
+  document.getElementById('selectedDate').textContent = day + '/' + (m+1) + '/' + y;
+  var modal = document.getElementById('eventModal');
+  modal.classList.remove('hidden');
+  modal.style.display = 'flex';
+}
+
+function closeModal(){
+  var modal = document.getElementById('eventModal');
+  modal.style.display = 'none';
+  modal.classList.add('hidden');
+}
+
+function saveEvent(){
+  var title=document.getElementById('eventTitle').value;
+  var time=document.getElementById('eventTime').value;
+  var file=document.getElementById('mediaInput').files[0];
+
+  var y=currentDate.getFullYear();
+  var m=currentDate.getMonth();
+  var key=y+'-'+m+'-'+selectedDay;
+
+  var data=JSON.parse(localStorage.getItem(key)||'[]');
+
+  if(file){
+    var reader = new FileReader();
+    reader.onload=function(){
+      data.push({title:title,time:time,media:reader.result});
+      localStorage.setItem(key,JSON.stringify(data));
+      closeModal();
+      loadCalendar();
+    };
+    reader.readAsDataURL(file);
+  } else {
+    data.push({title:title,time:time});
+    localStorage.setItem(key,JSON.stringify(data));
+    closeModal();
+    loadCalendar();
+  }
+}
+
+function openPanel(id){document.querySelectorAll('.panel').forEach(p=>p.style.display='none');document.getElementById(id).style.display='block';}
+function closePanels(){document.querySelectorAll('.panel').forEach(p=>p.style.display='none');}
+
+var pomodoroInterval=null;var meditationInterval=null;var time=1500;var med=300;
+
+function startPomodoro(){clearInterval(pomodoroInterval);var el=document.getElementById('timer');pomodoroInterval=setInterval(function(){if(time>0)time--;var m=Math.floor(time/60);var s=time%60;el.textContent=m+':' + (s<10?'0'+s:s);},1000);} 
+function startMeditation(){clearInterval(meditationInterval);var el=document.getElementById('medTimer');meditationInterval=setInterval(function(){if(med>0)med--;var m=Math.floor(med/60);var s=med%60;el.textContent=m+':' + (s<10?'0'+s:s);},1000);} 
+function saveNote(){var text=document.getElementById('noteInput').value;var list=document.getElementById('notesList');if(text.trim()==='')return;var p=document.createElement('p');p.textContent=text;list.appendChild(p);} 
+function addTodo(){var val=document.getElementById('todoInput').value;var list=document.getElementById('todoList');if(val.trim()==='')return;var li=document.createElement('li');li.textContent=val;li.onclick=function(){this.remove();};list.appendChild(li);} 
+function addSong(){var val=document.getElementById('songInput').value;var list=document.getElementById('playlist');if(val.trim()==='')return;var li=document.createElement('li');li.textContent=val;li.onclick=function(){this.remove();};list.appendChild(li);} 
+</script>
+
+</body>
+</html>
